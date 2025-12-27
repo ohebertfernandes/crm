@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, X, ChevronRight, ChevronLeft, Save, FileText, CheckSquare, BarChart, Grid, Heart, Layout, LayoutDashboard, Search, Settings, RefreshCw, Trash2, Calendar } from 'lucide-react';
 
-// --- DATA STRUCTURES & CONFIG ---
+// --- CONFIGURAÇÃO ---
 
 const COLUMNS = [
   { id: 'pre-kickoff', title: 'Pré Kick-off', color: 'border-l-4 border-yellow-500' },
@@ -26,72 +26,14 @@ const INITIAL_LEAD = {
   contact: "João Silva",
   status: "pre-kickoff",
   data: {
-    // 1. DADOS DA EMPRESA E CULTURA
     pre_nome: "Lead Exemplo (Demo)",
-    pre_envolvidos: "João Silva (CEO), Maria (CMO)",
-    pre_historico: "Empresa fundada em 2015...",
-    pre_missao: "Transformar o mercado de...",
-    pre_visao: "Ser referência até 2030...",
-    pre_valores: "Inovação, Transparência...",
-    pre_site_social: "instagram.com/exemplo",
-    
-    // 2. MODELO DE NEGÓCIO E FINANCEIRO
-    pre_modelo_negocio: "B2B, Recorrência",
-    pre_faturamento_detalhado: "Jan: 100k, Fev: 110k...",
-    pre_sazonalidade: "Queda nas férias escolares",
-    pre_mix_produtos: "Consultoria (60%), Software (40%)",
-    pre_novos_vs_base: "70% Base, 30% Novos",
-    pre_regiao: "Nacional",
-    pre_tempo_negociacao: "30 a 45 dias",
-    pre_transacoes_mes: "15 contratos",
-    pre_ticket_medio: "R$ 5.000,00",
-    pre_custo_variavel: "20%",
-    pre_recorrencia: "Mensal (12x ano)",
-    pre_estrategia_preco: "Maximização de margem de lucro",
-
-    // 3. PRODUTOS, CLIENTES E MERCADO
-    pre_publico_alvo: "Diretores de TI, Empresas > 50 func",
-    pre_decisor: "CFO e CTO",
-    pre_influenciador: "Gerentes de Projeto",
-    pre_nivel_consciencia: "Consciente do Problema",
-    pre_reconhecimento_necessidade: "Quando a auditoria falha",
-    pre_promessa: "Conformidade fiscal sem dor de cabeça",
-    pre_necessidades_medos: "Medo de multas",
-    pre_motivos_escolha: "Atendimento 24h e suporte local",
-    pre_concorrentes: "Big4, Consultorias Locais",
-    pre_objecoes: "Custo de implementação alto",
-    pre_pesquisa_satisfacao: "Sim",
-    pre_nivel_satisfacao: "Muito Satisfeitos",
-    pre_nivel_satisfacao_obs: "", // Campo extra para "Outro"
-
-    // 4. SWOT (Do Formulário)
-    pre_swot_s: "Equipe técnica certificada",
-    pre_swot_w: "Marketing fraco",
-    pre_swot_o: "Nova lei de proteção de dados",
-    pre_swot_t: "Novos softwares de IA",
-
-    // 5. MARKETING E COMERCIAL
-    pre_canais_atuais: "Indicação, Eventos",
-    pre_canais_percentual: "Indicação (80%), Eventos (20%)", // Campo Adicionado
-    pre_verba_midia: "R$ 2.000,00",
-    pre_equipe_mkt: "1 Estagiário",
-    pre_processos_mkt: "Postagens esporádicas no LinkedIn",
-    pre_miv: "Não",
-    pre_requisitos_marca: "Não usar verde limão", // Campo Adicionado
-    pre_equipe_comercial: "João (Sócio faz vendas)",
-    pre_vendedores_percentual: "João (100%)", // Campo Adicionado
-    pre_processos_comercial: "Planilha Excel",
-    
-    // 6. FINALIZAÇÃO
-    pre_objetivo: "Estruturar máquina de vendas previsível",
-    pre_sugestao_kickoff: "Terça-feira às 14h", // Campo Adicionado
-    
-    // Outras seções do CRM
+    pre_envolvidos: "João Silva (CEO)",
+    pre_objetivo: "Exemplo de demonstração",
     kickoff: {}, bmc: {}, sexy: {}, market: {}, swot: {}, audit: {}
   }
 };
 
-// --- COMPONENTS ---
+// --- COMPONENTES AUXILIARES ---
 
 const Card = ({ lead, onClick, onMove, onDelete }) => {
   const colIndex = COLUMNS.findIndex(c => c.id === lead.status);
@@ -179,7 +121,8 @@ const InputGroup = ({ label, sublabel, value, onChange, type = "textarea" }) => 
   </div>
 );
 
-// --- CANVAS COMPONENTS (BMC & Sexy) ---
+// --- CANVAS COMPONENTS ---
+
 const BMCCell = ({ title, fieldKey, data, onChange, height = "h-40" }) => (
   <div className={`border border-gray-300 p-2 bg-white flex flex-col ${height}`}>
     <span className="text-xs font-bold text-gray-600 uppercase mb-1">{title}</span>
@@ -235,7 +178,7 @@ const SexyCanvas = ({ data, onChange }) => {
     )
 }
 
-// --- MAIN APP ---
+// --- APLICAÇÃO PRINCIPAL ---
 
 export default function CRMBoard() {
   const [leads, setLeads] = useState([INITIAL_LEAD]);
@@ -244,28 +187,30 @@ export default function CRMBoard() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [dragOverCol, setDragOverCol] = useState(null);
 
-  // --- INTEGRATION LOGIC ---
+  // Lógica de Integração com Proteção contra Erros
   useEffect(() => {
-    // Check local storage for new leads submitted via HTML form
     const loadLeadsFromStorage = () => {
         try {
             const storedLeads = localStorage.getItem('v4_crm_leads');
             if (storedLeads) {
                 const parsedLeads = JSON.parse(storedLeads);
-                // Simple merge: add leads that don't exist yet by ID
-                setLeads(prev => {
-                    const currentIds = new Set(prev.map(l => l.id));
-                    const newLeads = parsedLeads.filter(l => !currentIds.has(l.id));
-                    return [...prev, ...newLeads];
-                });
+                
+                // Validação: Garante que é uma lista e que os itens têm o formato correto
+                if (Array.isArray(parsedLeads)) {
+                    const validLeads = parsedLeads.filter(l => l && l.id && l.data);
+                    
+                    setLeads(prev => {
+                        const currentIds = new Set(prev.map(l => l.id));
+                        const newLeads = validLeads.filter(l => !currentIds.has(l.id));
+                        return [...prev, ...newLeads];
+                    });
+                }
             }
         } catch (e) {
-            console.error("Erro ao carregar leads do armazenamento:", e);
+            console.error("Erro ao carregar dados. Limpando cache corrompido.", e);
         }
     };
     loadLeadsFromStorage();
-    
-    // Listen for storage events (if user has both tabs open)
     window.addEventListener('storage', loadLeadsFromStorage);
     return () => window.removeEventListener('storage', loadLeadsFromStorage);
   }, []);
@@ -273,14 +218,17 @@ export default function CRMBoard() {
   const clearStorageData = () => {
       if(confirm('Isso limpará os leads importados do formulário (apenas do armazenamento local). Confirma?')) {
           localStorage.removeItem('v4_crm_leads');
-          alert('Dados de integração limpos.');
+          window.location.reload(); // Recarrega para limpar a memória
       }
   }
 
-  // Helper to update nested data
   const updateLeadData = (section, key, value) => {
     if (!selectedLead) return;
     const updatedLead = { ...selectedLead };
+    
+    // Garante que 'data' existe
+    if (!updatedLead.data) updatedLead.data = {};
+
     if (section === 'root') {
         updatedLead.data[key] = value;
     } else {
@@ -299,6 +247,11 @@ export default function CRMBoard() {
       if(confirm('Tem certeza que deseja excluir este lead?')) {
           setLeads(leads.filter(l => l.id !== id));
           if(selectedLead?.id === id) setIsModalOpen(false);
+          
+          // Atualiza o localStorage também para não voltar ao recarregar
+          const currentStorage = JSON.parse(localStorage.getItem('v4_crm_leads') || '[]');
+          const newStorage = currentStorage.filter(l => l.id !== id);
+          localStorage.setItem('v4_crm_leads', JSON.stringify(newStorage));
       }
   };
 
@@ -330,7 +283,9 @@ export default function CRMBoard() {
   };
 
   const renderTabContent = () => {
-    const data = selectedLead.data || {};
+    // Proteção contra 'data' undefined
+    const data = selectedLead?.data || {};
+    
     switch (activeTab) {
       case 'pre-info':
         return (
