@@ -1,490 +1,420 @@
-import React, { useState, useEffect } from 'react';
-import { Plus, X, ChevronRight, ChevronLeft, Save, FileText, CheckSquare, BarChart, Grid, Heart, Layout, LayoutDashboard, Search, Settings, RefreshCw, Trash2, Calendar } from 'lucide-react';
-
-// --- CONFIGURAÇÃO ---
-
-const COLUMNS = [
-  { id: 'pre-kickoff', title: 'Pré Kick-off', color: 'border-l-4 border-yellow-500' },
-  { id: 'kickoff', title: 'Kick-off (Reunião)', color: 'border-l-4 border-red-600' },
-  { id: 'planejamento', title: 'Planejamento', color: 'border-l-4 border-blue-500' },
-  { id: 'em-execucao', title: 'Em Execução', color: 'border-l-4 border-green-500' },
-];
-
-const TABS = [
-  { id: 'pre-info', label: '1. Pré Kick-off (Dados Completos)', icon: FileText },
-  { id: 'kickoff-q', label: '2. Perguntas Kick-off (Aprofundamento)', icon: Settings },
-  { id: 'onboarding', label: '3. Onboarding Técnico', icon: CheckSquare },
-  { id: 'market', label: '4. Mercado & SWOT (Estratégia)', icon: Search },
-  { id: 'audit', label: '5. Auditoria de Mídia', icon: BarChart },
-  { id: 'bmc', label: '6. Business Model Canvas', icon: LayoutDashboard },
-  { id: 'sexy', label: '7. Sexy Canvas', icon: Heart },
-];
-
-const INITIAL_LEAD = {
-  id: 101,
-  title: "Lead Exemplo (Demo)",
-  contact: "João Silva",
-  status: "pre-kickoff",
-  data: {
-    pre_nome: "Lead Exemplo (Demo)",
-    pre_envolvidos: "João Silva (CEO)",
-    pre_objetivo: "Exemplo de demonstração",
-    kickoff: {}, bmc: {}, sexy: {}, market: {}, swot: {}, audit: {}
-  }
-};
-
-// --- COMPONENTES AUXILIARES ---
-
-const Card = ({ lead, onClick, onMove, onDelete }) => {
-  const colIndex = COLUMNS.findIndex(c => c.id === lead.status);
-  const canMoveLeft = colIndex > 0;
-  const canMoveRight = colIndex < COLUMNS.length - 1;
-
-  const handleDragStart = (e) => {
-    e.dataTransfer.setData("leadId", lead.id);
-    e.dataTransfer.effectAllowed = "move";
-  };
-
-  return (
-    <div 
-      draggable
-      onDragStart={handleDragStart}
-      onClick={() => onClick(lead)}
-      className={`group relative bg-white p-4 rounded shadow-sm mb-3 cursor-grab active:cursor-grabbing hover:shadow-md transition-all border border-gray-200 ${COLUMNS.find(c => c.id === lead.status)?.color || ''}`}
-    >
-      <div className="pr-8">
-          <h3 className="font-bold text-gray-800 text-sm leading-tight mb-1">{lead.title}</h3>
-          <p className="text-xs text-gray-500 truncate">{lead.contact}</p>
-      </div>
-
-      <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-        {canMoveLeft && (
-            <button 
-                onClick={(e) => { e.stopPropagation(); onMove(lead.id, COLUMNS[colIndex - 1].id); }}
-                className="p-1 hover:bg-gray-100 rounded text-gray-400 hover:text-black transition-colors"
-                title="Voltar etapa"
-            >
-                <ChevronLeft size={14} />
-            </button>
-        )}
-        {canMoveRight && (
-            <button 
-                onClick={(e) => { e.stopPropagation(); onMove(lead.id, COLUMNS[colIndex + 1].id); }}
-                className="p-1 hover:bg-gray-100 rounded text-gray-400 hover:text-black transition-colors"
-                title="Avançar etapa"
-            >
-                <ChevronRight size={14} />
-            </button>
-        )}
-      </div>
-
-      <div className="mt-3 flex justify-between items-center text-[10px] text-gray-400 uppercase font-semibold tracking-wider">
-        <span>#{String(lead.id).slice(-4)}</span>
-        <button 
-            onClick={(e) => { e.stopPropagation(); onDelete(lead.id); }}
-            className="hover:text-red-600 transition-colors"
-            title="Excluir Card"
-        >
-            <Trash2 size={12} />
-        </button>
-      </div>
-    </div>
-  );
-};
-
-const SectionTitle = ({ children }) => (
-  <h3 className="text-xl font-bold text-gray-800 mt-8 mb-4 border-b border-gray-200 pb-2 flex items-center gap-2">
-      <div className="w-2 h-6 bg-red-600 rounded-sm"></div>
-      {children}
-  </h3>
-);
-
-const InputGroup = ({ label, sublabel, value, onChange, type = "textarea" }) => (
-  <div className="mb-4">
-    <label className="block text-sm font-bold text-gray-700 mb-1">{label}</label>
-    {sublabel && <p className="text-xs text-gray-500 mb-2 italic">{sublabel}</p>}
-    {type === 'textarea' ? (
-      <textarea 
-        className="w-full p-2 border border-gray-300 rounded focus:border-red-600 focus:ring-1 focus:ring-red-600 outline-none transition bg-white"
-        rows="3"
-        value={value || ''}
-        onChange={e => onChange(e.target.value)}
-      />
-    ) : (
-      <input 
-        type="text"
-        className="w-full p-2 border border-gray-300 rounded focus:border-red-600 focus:ring-1 focus:ring-red-600 outline-none transition bg-white"
-        value={value || ''}
-        onChange={e => onChange(e.target.value)}
-      />
-    )}
-  </div>
-);
-
-// --- CANVAS COMPONENTS ---
-
-const BMCCell = ({ title, fieldKey, data, onChange, height = "h-40" }) => (
-  <div className={`border border-gray-300 p-2 bg-white flex flex-col ${height}`}>
-    <span className="text-xs font-bold text-gray-600 uppercase mb-1">{title}</span>
-    <textarea 
-      className="flex-1 w-full text-sm resize-none outline-none bg-transparent"
-      placeholder="..."
-      value={data[fieldKey] || ''}
-      onChange={(e) => onChange(fieldKey, e.target.value)}
-    />
-  </div>
-);
-
-const BusinessModelCanvas = ({ data, onChange }) => {
-  const handleChange = (key, val) => onChange('bmc', { ...data, [key]: val });
-  return (
-    <div className="bg-gray-50 p-4 rounded border border-gray-200 overflow-x-auto">
-      <div className="min-w-[800px] grid grid-cols-5 gap-2">
-        <div className="row-span-2 col-span-1"><BMCCell title="Parcerias Principais" fieldKey="parcerias" data={data} onChange={handleChange} height="h-96" /></div>
-        <div className="col-span-1 flex flex-col gap-2">
-            <BMCCell title="Atividades Principais" fieldKey="atividades" data={data} onChange={handleChange} />
-            <BMCCell title="Recursos Principais" fieldKey="recursos" data={data} onChange={handleChange} />
-        </div>
-        <div className="row-span-2 col-span-1"><BMCCell title="Proposta de Valor" fieldKey="proposta" data={data} onChange={handleChange} height="h-96" /></div>
-        <div className="col-span-1 flex flex-col gap-2">
-            <BMCCell title="Relacionamento com Clientes" fieldKey="relacionamento" data={data} onChange={handleChange} />
-            <BMCCell title="Canais" fieldKey="canais" data={data} onChange={handleChange} />
-        </div>
-        <div className="row-span-2 col-span-1"><BMCCell title="Segmentos de Clientes" fieldKey="segmentos" data={data} onChange={handleChange} height="h-96" /></div>
-        <div className="col-span-2.5"><BMCCell title="Estrutura de Custos" fieldKey="custos" data={data} onChange={handleChange} height="h-32" /></div>
-        <div className="col-span-2.5"><BMCCell title="Fontes de Receita" fieldKey="receitas" data={data} onChange={handleChange} height="h-32" /></div>
-      </div>
-    </div>
-  );
-};
-
-const SexyCanvas = ({ data, onChange }) => {
-    const handleChange = (key, val) => onChange('sexy', { ...data, [key]: val });
-    return (
-        <div className="grid md:grid-cols-2 gap-6">
-            <div className="bg-pink-50 p-4 rounded border border-pink-200">
-                <h4 className="font-bold text-pink-700 mb-4 text-center text-lg">Os 7 Pecados (Emoção/Desejo)</h4>
-                {['Luxúria','Gula','Avareza','Preguiça','Ira','Inveja','Orgulho'].map(p => (
-                    <InputGroup key={p} label={p} value={data[p.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "")]} onChange={(v) => handleChange(p.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, ""), v)} type="text" />
-                ))}
-            </div>
-            <div className="bg-blue-50 p-4 rounded border border-blue-200">
-                <h4 className="font-bold text-blue-700 mb-4 text-center text-lg">Criança Interior (Curiosidade/Diversão)</h4>
-                {['Curiosidade','Diversão','Pertencimento','Segurança','Liberdade'].map(p => (
-                    <InputGroup key={p} label={p} value={data[p.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "")]} onChange={(v) => handleChange(p.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, ""), v)} type="text" />
-                ))}
-            </div>
-        </div>
-    )
-}
-
-// --- APLICAÇÃO PRINCIPAL ---
-
-export default function CRMBoard() {
-  const [leads, setLeads] = useState([INITIAL_LEAD]);
-  const [selectedLead, setSelectedLead] = useState(null);
-  const [activeTab, setActiveTab] = useState('pre-info');
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [dragOverCol, setDragOverCol] = useState(null);
-
-  // Lógica de Integração com Proteção contra Erros
-  useEffect(() => {
-    const loadLeadsFromStorage = () => {
-        try {
-            const storedLeads = localStorage.getItem('v4_crm_leads');
-            if (storedLeads) {
-                const parsedLeads = JSON.parse(storedLeads);
-                
-                // Validação: Garante que é uma lista e que os itens têm o formato correto
-                if (Array.isArray(parsedLeads)) {
-                    const validLeads = parsedLeads.filter(l => l && l.id && l.data);
-                    
-                    setLeads(prev => {
-                        const currentIds = new Set(prev.map(l => l.id));
-                        const newLeads = validLeads.filter(l => !currentIds.has(l.id));
-                        return [...prev, ...newLeads];
-                    });
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CRM V4 Company</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Fonte Montserrat -->
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: { v4red: '#cf0e0e', v4black: '#1a1a1a', v4gray: '#f4f4f4' },
+                    fontFamily: { sans: ['Montserrat', 'sans-serif'] }
                 }
             }
-        } catch (e) {
-            console.error("Erro ao carregar dados. Limpando cache corrompido.", e);
         }
-    };
-    loadLeadsFromStorage();
-    window.addEventListener('storage', loadLeadsFromStorage);
-    return () => window.removeEventListener('storage', loadLeadsFromStorage);
-  }, []);
+    </script>
+    <style>
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        .animate-fadeIn { animation: fadeIn 0.2s ease-out; }
+        @keyframes slideInRight { from { transform: translateX(100%); } to { transform: translateX(0); } }
+        .animate-slideInRight { animation: slideInRight 0.3s cubic-bezier(0.16, 1, 0.3, 1); }
+    </style>
+</head>
+<body class="bg-v4gray text-gray-800 font-sans h-screen overflow-hidden">
+    <div id="root"></div>
 
-  const clearStorageData = () => {
-      if(confirm('Isso limpará os leads importados do formulário (apenas do armazenamento local). Confirma?')) {
-          localStorage.removeItem('v4_crm_leads');
-          window.location.reload(); // Recarrega para limpar a memória
-      }
-  }
-
-  const updateLeadData = (section, key, value) => {
-    if (!selectedLead) return;
-    const updatedLead = { ...selectedLead };
-    
-    // Garante que 'data' existe
-    if (!updatedLead.data) updatedLead.data = {};
-
-    if (section === 'root') {
-        updatedLead.data[key] = value;
-    } else {
-        if (!updatedLead.data[section]) updatedLead.data[section] = {};
-        if (typeof key === 'object') {
-             updatedLead.data[section] = key;
-        } else {
-            updatedLead.data[section][key] = value;
+    <!-- Import Map para facilitar o uso do React via navegador -->
+    <script type="importmap">
+        {
+            "imports": {
+                "react": "https://esm.sh/react@18.2.0",
+                "react-dom/client": "https://esm.sh/react-dom@18.2.0/client",
+                "lucide-react": "https://esm.sh/lucide-react@0.263.1"
+            }
         }
-    }
-    setSelectedLead(updatedLead);
-    setLeads(leads.map(l => l.id === updatedLead.id ? updatedLead : l));
-  };
+    </script>
 
-  const handleDeleteLead = (id) => {
-      if(confirm('Tem certeza que deseja excluir este lead?')) {
-          setLeads(leads.filter(l => l.id !== id));
-          if(selectedLead?.id === id) setIsModalOpen(false);
-          
-          // Atualiza o localStorage também para não voltar ao recarregar
-          const currentStorage = JSON.parse(localStorage.getItem('v4_crm_leads') || '[]');
-          const newStorage = currentStorage.filter(l => l.id !== id);
-          localStorage.setItem('v4_crm_leads', JSON.stringify(newStorage));
-      }
-  };
+    <!-- Código da Aplicação -->
+    <script type="module">
+        import React, { useState, useEffect } from 'react';
+        import { createRoot } from 'react-dom/client';
+        import { Plus, X, ChevronRight, ChevronLeft, Save, FileText, CheckSquare, BarChart, Grid, Heart, Layout, LayoutDashboard, Search, Settings, RefreshCw, Trash2, Calendar } from 'lucide-react';
 
-  const handleCreateLead = () => {
-    const newLead = {
-      id: Date.now(),
-      title: "Lead Manual",
-      contact: "Aguardando...",
-      status: "pre-kickoff",
-      data: { kickoff: {}, bmc: {}, sexy: {}, market: {}, swot: {}, audit: {} }
-    };
-    setLeads([...leads, newLead]);
-  };
+        // --- CONFIGURAÇÃO ---
+        const COLUMNS = [
+            { id: 'pre-kickoff', title: 'Pré Kick-off', color: 'border-l-4 border-yellow-500' },
+            { id: 'kickoff', title: 'Kick-off (Reunião)', color: 'border-l-4 border-red-600' },
+            { id: 'planejamento', title: 'Planejamento', color: 'border-l-4 border-blue-500' },
+            { id: 'em-execucao', title: 'Em Execução', color: 'border-l-4 border-green-500' },
+        ];
 
-  const changeStatus = (leadId, newStatus) => {
-    const targetLead = leads.find(l => l.id === leadId);
-    if (!targetLead) return;
-    const updated = { ...targetLead, status: newStatus };
-    setLeads(prev => prev.map(l => l.id === leadId ? updated : l));
-    if (selectedLead && selectedLead.id === leadId) setSelectedLead(updated);
-  };
+        const TABS = [
+            { id: 'pre-info', label: '1. Pré Kick-off (Dados Completos)', icon: FileText },
+            { id: 'kickoff-q', label: '2. Perguntas Kick-off (Aprofundamento)', icon: Settings },
+            { id: 'onboarding', label: '3. Onboarding Técnico', icon: CheckSquare },
+            { id: 'market', label: '4. Mercado & SWOT (Estratégia)', icon: Search },
+            { id: 'audit', label: '5. Auditoria de Mídia', icon: BarChart },
+            { id: 'bmc', label: '6. Business Model Canvas', icon: LayoutDashboard },
+            { id: 'sexy', label: '7. Sexy Canvas', icon: Heart },
+        ];
 
-  const handleDragOver = (e, colId) => { e.preventDefault(); setDragOverCol(colId); };
-  const handleDrop = (e, colId) => {
-    e.preventDefault();
-    const leadId = Number(e.dataTransfer.getData("leadId"));
-    setDragOverCol(null);
-    changeStatus(leadId, colId);
-  };
+        const INITIAL_LEAD = {
+            id: 101,
+            title: "Lead Exemplo (Demo)",
+            contact: "João Silva",
+            status: "pre-kickoff",
+            data: {
+                pre_nome: "Lead Exemplo (Demo)",
+                pre_envolvidos: "João Silva (CEO)",
+                pre_objetivo: "Exemplo de demonstração",
+                kickoff: {}, bmc: {}, sexy: {}, market: {}, swot: {}, audit: {}
+            }
+        };
 
-  const renderTabContent = () => {
-    // Proteção contra 'data' undefined
-    const data = selectedLead?.data || {};
-    
-    switch (activeTab) {
-      case 'pre-info':
-        return (
-          <div className="space-y-4 animate-fadeIn pb-10">
-            <h2 className="text-2xl font-bold text-gray-800">1. Dados do Pré Kick-off</h2>
-            <div className="bg-yellow-50 p-4 rounded border border-yellow-200 mb-4 text-sm text-yellow-800 flex justify-between items-center">
-                <span>Informações importadas do formulário do cliente.</span>
-                <span className="text-xs bg-yellow-200 px-2 py-1 rounded">Read-Only / Editável</span>
-            </div>
-            
-            <SectionTitle>Dados Gerais & Cultura</SectionTitle>
-            <InputGroup label="Nome da Empresa" value={data.pre_nome} onChange={(v) => updateLeadData('root', 'pre_nome', v)} type="text" />
-            <InputGroup label="Principais Envolvidos (Nome/Cargo)" value={data.pre_envolvidos} onChange={(v) => updateLeadData('root', 'pre_envolvidos', v)} />
-            <InputGroup label="Site e Redes Sociais" value={data.pre_site_social} onChange={(v) => updateLeadData('root', 'pre_site_social', v)} type="text" />
-            <InputGroup label="Histórico da Empresa" value={data.pre_historico} onChange={(v) => updateLeadData('root', 'pre_historico', v)} />
-            <div className="grid md:grid-cols-3 gap-4">
-                <InputGroup label="Missão" value={data.pre_missao} onChange={(v) => updateLeadData('root', 'pre_missao', v)} />
-                <InputGroup label="Visão" value={data.pre_visao} onChange={(v) => updateLeadData('root', 'pre_visao', v)} />
-                <InputGroup label="Valores" value={data.pre_valores} onChange={(v) => updateLeadData('root', 'pre_valores', v)} />
-            </div>
+        // --- COMPONENTES AUXILIARES ---
+        const Card = ({ lead, onClick, onMove, onDelete }) => {
+            const colIndex = COLUMNS.findIndex(c => c.id === lead.status);
+            const canMoveLeft = colIndex > 0;
+            const canMoveRight = colIndex < COLUMNS.length - 1;
 
-            <SectionTitle>Negócio, Financeiro & Produtos</SectionTitle>
-            <InputGroup label="Modelo de Negócio (B2B/B2C/etc)" value={data.pre_modelo_negocio} onChange={(v) => updateLeadData('root', 'pre_modelo_negocio', v)} type="text" />
-            <InputGroup label="Faturamento Detalhado (Mês a Mês)" value={data.pre_faturamento_detalhado} onChange={(v) => updateLeadData('root', 'pre_faturamento_detalhado', v)} />
-            <InputGroup label="Peculiaridades Sazonais" value={data.pre_sazonalidade} onChange={(v) => updateLeadData('root', 'pre_sazonalidade', v)} />
-            <InputGroup label="Mix de Produtos/Serviços (% Faturamento)" value={data.pre_mix_produtos} onChange={(v) => updateLeadData('root', 'pre_mix_produtos', v)} />
-            <div className="grid md:grid-cols-2 gap-4">
-                <InputGroup label="% Clientes Novos vs Base" value={data.pre_novos_vs_base} onChange={(v) => updateLeadData('root', 'pre_novos_vs_base', v)} type="text" />
-                <InputGroup label="Região de Atuação (%)" value={data.pre_regiao} onChange={(v) => updateLeadData('root', 'pre_regiao', v)} type="text" />
-                <InputGroup label="Tempo Médio Negociação" value={data.pre_tempo_negociacao} onChange={(v) => updateLeadData('root', 'pre_tempo_negociacao', v)} type="text" />
-                <InputGroup label="Transações Mensais" value={data.pre_transacoes_mes} onChange={(v) => updateLeadData('root', 'pre_transacoes_mes', v)} type="text" />
-                <InputGroup label="Ticket Médio" value={data.pre_ticket_medio} onChange={(v) => updateLeadData('root', 'pre_ticket_medio', v)} type="text" />
-                <InputGroup label="% Custo Variável" value={data.pre_custo_variavel} onChange={(v) => updateLeadData('root', 'pre_custo_variavel', v)} type="text" />
-                <InputGroup label="Recorrência de Compra" value={data.pre_recorrencia} onChange={(v) => updateLeadData('root', 'pre_recorrencia', v)} type="text" />
-                <InputGroup label="Estratégia de Preço" value={data.pre_estrategia_preco} onChange={(v) => updateLeadData('root', 'pre_estrategia_preco', v)} type="text" />
-            </div>
+            const handleDragStart = (e) => {
+                e.dataTransfer.setData("leadId", lead.id);
+                e.dataTransfer.effectAllowed = "move";
+            };
 
-            <SectionTitle>Cliente, Mercado & Concorrência</SectionTitle>
-            <InputGroup label="Público Alvo (Persona)" value={data.pre_publico_alvo} onChange={(v) => updateLeadData('root', 'pre_publico_alvo', v)} />
-            <div className="grid md:grid-cols-2 gap-4">
-                <InputGroup label="Quem Decide?" value={data.pre_decisor} onChange={(v) => updateLeadData('root', 'pre_decisor', v)} type="text" />
-                <InputGroup label="Quem Influencia?" value={data.pre_influenciador} onChange={(v) => updateLeadData('root', 'pre_influenciador', v)} type="text" />
-                <InputGroup label="Nível Consciência" value={data.pre_nivel_consciencia} onChange={(v) => updateLeadData('root', 'pre_nivel_consciencia', v)} type="text" />
-                <InputGroup label="Quando reconhecem a necessidade?" value={data.pre_reconhecimento_necessidade} onChange={(v) => updateLeadData('root', 'pre_reconhecimento_necessidade', v)} type="text" />
-            </div>
-            <InputGroup label="Grande Promessa (Benefício Final)" value={data.pre_promessa} onChange={(v) => updateLeadData('root', 'pre_promessa', v)} />
-            <InputGroup label="Maiores Necessidades/Medos" value={data.pre_necessidades_medos} onChange={(v) => updateLeadData('root', 'pre_necessidades_medos', v)} />
-            <InputGroup label="Motivos da Escolha (vs Concorrente)" value={data.pre_motivos_escolha} onChange={(v) => updateLeadData('root', 'pre_motivos_escolha', v)} />
-            <InputGroup label="Concorrentes Diretos" value={data.pre_concorrentes} onChange={(v) => updateLeadData('root', 'pre_concorrentes', v)} />
-            <InputGroup label="Principais Objeções" value={data.pre_objecoes} onChange={(v) => updateLeadData('root', 'pre_objecoes', v)} />
-            
-            <div className="grid md:grid-cols-2 gap-4">
-                <InputGroup label="Fazem Pesquisa de Satisfação?" value={data.pre_pesquisa_satisfacao} onChange={(v) => updateLeadData('root', 'pre_pesquisa_satisfacao', v)} type="text" />
-                <div>
-                     <label className="block text-sm font-bold text-gray-700 mb-1">Nível de Satisfação</label>
-                     <input type="text" className="w-full p-2 border border-gray-300 rounded mb-2" value={data.pre_nivel_satisfacao || ''} onChange={(e) => updateLeadData('root', 'pre_nivel_satisfacao', e.target.value)} />
-                     <input type="text" className="w-full p-2 border border-gray-300 rounded bg-gray-50 text-xs" placeholder="Obs / Outro nível..." value={data.pre_nivel_satisfacao_obs || ''} onChange={(e) => updateLeadData('root', 'pre_nivel_satisfacao_obs', e.target.value)} />
-                </div>
-            </div>
-            
-            <SectionTitle>Análise SWOT (Cliente)</SectionTitle>
-            <div className="grid grid-cols-2 gap-4">
-                <div className="bg-green-50 p-2 rounded"><span className="font-bold text-green-800">Forças</span><p className="text-sm mt-1">{data.pre_swot_s}</p></div>
-                <div className="bg-red-50 p-2 rounded"><span className="font-bold text-red-800">Fraquezas</span><p className="text-sm mt-1">{data.pre_swot_w}</p></div>
-                <div className="bg-blue-50 p-2 rounded"><span className="font-bold text-blue-800">Oportunidades</span><p className="text-sm mt-1">{data.pre_swot_o}</p></div>
-                <div className="bg-yellow-50 p-2 rounded"><span className="font-bold text-yellow-800">Ameaças</span><p className="text-sm mt-1">{data.pre_swot_t}</p></div>
-            </div>
+            return React.createElement('div', {
+                draggable: true,
+                onDragStart: handleDragStart,
+                onClick: () => onClick(lead),
+                className: `group relative bg-white p-4 rounded shadow-sm mb-3 cursor-grab active:cursor-grabbing hover:shadow-md transition-all border border-gray-200 ${COLUMNS.find(c => c.id === lead.status)?.color || ''}`
+            }, 
+                React.createElement('div', { className: "pr-8" },
+                    React.createElement('h3', { className: "font-bold text-gray-800 text-sm leading-tight mb-1" }, lead.title),
+                    React.createElement('p', { className: "text-xs text-gray-500 truncate" }, lead.contact)
+                ),
+                React.createElement('div', { className: "absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity" },
+                    canMoveLeft && React.createElement('button', {
+                        onClick: (e) => { e.stopPropagation(); onMove(lead.id, COLUMNS[colIndex - 1].id); },
+                        className: "p-1 hover:bg-gray-100 rounded text-gray-400 hover:text-black transition-colors",
+                        title: "Voltar etapa"
+                    }, React.createElement(ChevronLeft, { size: 14 })),
+                    canMoveRight && React.createElement('button', {
+                        onClick: (e) => { e.stopPropagation(); onMove(lead.id, COLUMNS[colIndex + 1].id); },
+                        className: "p-1 hover:bg-gray-100 rounded text-gray-400 hover:text-black transition-colors",
+                        title: "Avançar etapa"
+                    }, React.createElement(ChevronRight, { size: 14 }))
+                ),
+                React.createElement('div', { className: "mt-3 flex justify-between items-center text-[10px] text-gray-400 uppercase font-semibold tracking-wider" },
+                    React.createElement('span', null, `#${String(lead.id).slice(-4)}`),
+                    React.createElement('button', {
+                        onClick: (e) => { e.stopPropagation(); onDelete(lead.id); },
+                        className: "hover:text-red-600 transition-colors",
+                        title: "Excluir Card"
+                    }, React.createElement(Trash2, { size: 12 }))
+                )
+            );
+        };
 
-            <SectionTitle>Marketing & Comercial</SectionTitle>
-            <InputGroup label="Canais de Venda Atuais" value={data.pre_canais_atuais} onChange={(v) => updateLeadData('root', 'pre_canais_atuais', v)} />
-            <InputGroup label="% Representatividade de cada Canal" value={data.pre_canais_percentual} onChange={(v) => updateLeadData('root', 'pre_canais_percentual', v)} />
-            <div className="grid md:grid-cols-2 gap-4">
-                <InputGroup label="Verba Mídia Mensal" value={data.pre_verba_midia} onChange={(v) => updateLeadData('root', 'pre_verba_midia', v)} type="text" />
-                <InputGroup label="Possui MIV (Manual Marca)?" value={data.pre_miv} onChange={(v) => updateLeadData('root', 'pre_miv', v)} type="text" />
-            </div>
-            <InputGroup label="Requisitos Específicos de Marca" value={data.pre_requisitos_marca} onChange={(v) => updateLeadData('root', 'pre_requisitos_marca', v)} type="text" />
-            <InputGroup label="Equipe Marketing (Pessoas/Função)" value={data.pre_equipe_mkt} onChange={(v) => updateLeadData('root', 'pre_equipe_mkt', v)} />
-            <InputGroup label="Processos/Ferramentas Marketing" value={data.pre_processos_mkt} onChange={(v) => updateLeadData('root', 'pre_processos_mkt', v)} />
-            
-            <div className="mt-4 pt-4 border-t border-gray-200">
-                <InputGroup label="Equipe Comercial" value={data.pre_equipe_comercial} onChange={(v) => updateLeadData('root', 'pre_equipe_comercial', v)} />
-                <InputGroup label="% Faturamento por Vendedor" value={data.pre_vendedores_percentual} onChange={(v) => updateLeadData('root', 'pre_vendedores_percentual', v)} />
-                <InputGroup label="Performance Vendedores (Destaques)" value={data.pre_performance_vendedores} onChange={(v) => updateLeadData('root', 'pre_performance_vendedores', v)} />
-                <InputGroup label="Processos Comercial (CRM/Rituais)" value={data.pre_processos_comercial} onChange={(v) => updateLeadData('root', 'pre_processos_comercial', v)} />
-            </div>
-
-            <div className="mt-6 bg-red-50 border-l-4 border-red-600 p-4">
-                 <h4 className="font-bold text-red-800">Objetivo Principal com a V4</h4>
-                 <InputGroup label="" value={data.pre_objetivo} onChange={(v) => updateLeadData('root', 'pre_objetivo', v)} />
-            </div>
-
-            <div className="mt-4 flex items-center gap-2 text-gray-600 bg-gray-100 p-3 rounded">
-                <Calendar size={18} />
-                <span className="font-semibold text-sm">Sugestão de Data para Kick-off:</span>
-                <span className="text-sm">{data.pre_sugestao_kickoff || 'Não informada'}</span>
-            </div>
-          </div>
+        const SectionTitle = ({ children }) => React.createElement('h3', { className: "text-xl font-bold text-gray-800 mt-8 mb-4 border-b border-gray-200 pb-2 flex items-center gap-2" },
+            React.createElement('div', { className: "w-2 h-6 bg-red-600 rounded-sm" }),
+            children
         );
-      case 'kickoff-q':
-        return (
-          <div className="space-y-6 animate-fadeIn pb-10">
-            <h2 className="text-xl font-bold text-gray-800 mb-2">2. Perguntas Kick-off</h2>
-            <SectionTitle>Posicionamento</SectionTitle>
-            <InputGroup label="Pitch Elevador" sublabel="O que vamos vender e por quê?" value={data.kickoff?.q1} onChange={(v) => updateLeadData('kickoff', 'q1', v)} />
-            <InputGroup label="Aspecto Funcional" value={data.kickoff?.q2} onChange={(v) => updateLeadData('kickoff', 'q2', v)} />
-            <InputGroup label="Dor Latente" value={data.kickoff?.q3} onChange={(v) => updateLeadData('kickoff', 'q3', v)} />
-            <SectionTitle>Oferta</SectionTitle>
-            <InputGroup label="Super Garantia" value={data.kickoff?.q11} onChange={(v) => updateLeadData('kickoff', 'q11', v)} />
-            <InputGroup label="Promessa Contra-Intuitiva" value={data.kickoff?.q10} onChange={(v) => updateLeadData('kickoff', 'q10', v)} />
-            <SectionTitle>Avatar</SectionTitle>
-            <InputGroup label="Sonhos e Desejos" value={data.kickoff?.q28} onChange={(v) => updateLeadData('kickoff', 'q28', v)} />
-            <InputGroup label="Medos Específicos" value={data.kickoff?.q26} onChange={(v) => updateLeadData('kickoff', 'q26', v)} />
-          </div>
+
+        const InputGroup = ({ label, sublabel, value, onChange, type = "textarea" }) => React.createElement('div', { className: "mb-4" },
+            React.createElement('label', { className: "block text-sm font-bold text-gray-700 mb-1" }, label),
+            sublabel && React.createElement('p', { className: "text-xs text-gray-500 mb-2 italic" }, sublabel),
+            type === 'textarea' ? React.createElement('textarea', {
+                className: "w-full p-2 border border-gray-300 rounded focus:border-red-600 focus:ring-1 focus:ring-red-600 outline-none transition bg-white",
+                rows: "3",
+                value: value || '',
+                onChange: e => onChange(e.target.value)
+            }) : React.createElement('input', {
+                type: "text",
+                className: "w-full p-2 border border-gray-300 rounded focus:border-red-600 focus:ring-1 focus:ring-red-600 outline-none transition bg-white",
+                value: value || '',
+                onChange: e => onChange(e.target.value)
+            })
         );
-      case 'onboarding': return <div className="space-y-6 animate-fadeIn pb-10"><h2 className="text-xl font-bold text-gray-800">3. Onboarding Técnico</h2><InputGroup label="Anotações Gerais" value={data.kickoff?.acessos_obs} onChange={(v) => updateLeadData('kickoff', 'acessos_obs', v)} /></div>;
-      case 'market': return <div className="space-y-6 animate-fadeIn pb-10"><h2 className="text-xl font-bold text-gray-800">4. Mercado & SWOT</h2><InputGroup label="TAM/SAM/SOM" value={data.market?.tam} onChange={(v) => updateLeadData('market', 'tam', v)} /></div>;
-      case 'audit': return <div className="space-y-6 animate-fadeIn pb-10"><h2 className="text-xl font-bold text-gray-800">5. Auditoria</h2><InputGroup label="Estrutura Atual" value={data.audit?.saber} onChange={(v) => updateLeadData('audit', 'saber', v)} /></div>;
-      case 'bmc': return <div className="space-y-4 animate-fadeIn pb-10"><h2 className="text-xl font-bold text-gray-800">6. BMC</h2><BusinessModelCanvas data={data.bmc || {}} onChange={(key, val) => updateLeadData(key, val)} /></div>;
-      case 'sexy': return <div className="space-y-4 animate-fadeIn pb-10"><h2 className="text-xl font-bold text-gray-800">7. Sexy Canvas</h2><SexyCanvas data={data.sexy || {}} onChange={(key, val) => updateLeadData(key, val)} /></div>;
-      default: return <div>Selecione uma aba.</div>;
-    }
-  };
 
-  return (
-    <div className="flex flex-col h-screen bg-gray-100 font-sans text-gray-900 overflow-hidden">
-      <header className="bg-black text-white px-6 py-4 flex justify-between items-center shadow-md z-10">
-        <div className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-red-600 rounded flex items-center justify-center font-bold">V4</div>
-            <h1 className="text-xl font-bold tracking-wide">CRM & Kick-off Board</h1>
-        </div>
-        <div className="flex gap-2">
-            <button onClick={() => window.location.reload()} className="flex items-center gap-2 bg-gray-800 hover:bg-gray-700 px-3 py-2 rounded text-xs font-semibold transition" title="Recarregar Integração">
-                <RefreshCw size={14} /> Atualizar
-            </button>
-            <button onClick={clearStorageData} className="flex items-center gap-2 bg-gray-800 hover:bg-gray-700 px-3 py-2 rounded text-xs font-semibold transition" title="Limpar dados importados">
-                <Trash2 size={14} />
-            </button>
-            <button onClick={handleCreateLead} className="flex items-center gap-2 bg-red-600 hover:bg-red-700 px-4 py-2 rounded text-sm font-semibold transition">
-                <Plus size={16} /> Novo Lead Manual
-            </button>
-        </div>
-      </header>
+        const BMCCell = ({ title, fieldKey, data, onChange, height = "h-40" }) => React.createElement('div', { className: `border border-gray-300 p-2 bg-white flex flex-col ${height}` },
+            React.createElement('span', { className: "text-xs font-bold text-gray-600 uppercase mb-1" }, title),
+            React.createElement('textarea', {
+                className: "flex-1 w-full text-sm resize-none outline-none bg-transparent",
+                placeholder: "...",
+                value: data[fieldKey] || '',
+                onChange: (e) => onChange(fieldKey, e.target.value)
+            })
+        );
 
-      <div className="flex-1 overflow-x-auto p-6">
-        <div className="flex gap-4 h-full min-w-[1000px]">
-          {COLUMNS.map(col => (
-            <div 
-                key={col.id} 
-                onDragOver={(e) => handleDragOver(e, col.id)}
-                onDrop={(e) => handleDrop(e, col.id)}
-                className={`flex-1 bg-gray-50 rounded-lg flex flex-col min-w-[280px] shadow-sm max-h-full transition-colors ${dragOverCol === col.id ? 'bg-red-50 ring-2 ring-red-300' : ''}`}
-            >
-              <div className={`p-3 font-bold text-gray-700 border-b flex justify-between items-center ${col.color}`}>
-                <span>{col.title}</span>
-                <span className="bg-gray-200 text-gray-600 text-xs px-2 py-0.5 rounded-full">{leads.filter(l => l.status === col.id).length}</span>
-              </div>
-              <div className="p-3 overflow-y-auto flex-1 custom-scrollbar">
-                {leads.filter(l => l.status === col.id).map(lead => (
-                  <Card key={lead.id} lead={lead} onClick={() => { setSelectedLead(lead); setIsModalOpen(true); }} onMove={changeStatus} onDelete={handleDeleteLead} />
-                ))}
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
+        const BusinessModelCanvas = ({ data, onChange }) => {
+            const handleChange = (key, val) => onChange('bmc', { ...data, [key]: val });
+            return React.createElement('div', { className: "bg-gray-50 p-4 rounded border border-gray-200 overflow-x-auto" },
+                React.createElement('div', { className: "min-w-[800px] grid grid-cols-5 gap-2" },
+                    React.createElement('div', { className: "row-span-2 col-span-1" }, React.createElement(BMCCell, { title: "Parcerias Principais", fieldKey: "parcerias", data: data, onChange: handleChange, height: "h-96" })),
+                    React.createElement('div', { className: "col-span-1 flex flex-col gap-2" },
+                        React.createElement(BMCCell, { title: "Atividades Principais", fieldKey: "atividades", data: data, onChange: handleChange }),
+                        React.createElement(BMCCell, { title: "Recursos Principais", fieldKey: "recursos", data: data, onChange: handleChange })
+                    ),
+                    React.createElement('div', { className: "row-span-2 col-span-1" }, React.createElement(BMCCell, { title: "Proposta de Valor", fieldKey: "proposta", data: data, onChange: handleChange, height: "h-96" })),
+                    React.createElement('div', { className: "col-span-1 flex flex-col gap-2" },
+                        React.createElement(BMCCell, { title: "Relacionamento com Clientes", fieldKey: "relacionamento", data: data, onChange: handleChange }),
+                        React.createElement(BMCCell, { title: "Canais", fieldKey: "canais", data: data, onChange: handleChange })
+                    ),
+                    React.createElement('div', { className: "row-span-2 col-span-1" }, React.createElement(BMCCell, { title: "Segmentos de Clientes", fieldKey: "segmentos", data: data, onChange: handleChange, height: "h-96" })),
+                    React.createElement('div', { className: "col-span-2.5" }, React.createElement(BMCCell, { title: "Estrutura de Custos", fieldKey: "custos", data: data, onChange: handleChange, height: "h-32" })),
+                    React.createElement('div', { className: "col-span-2.5" }, React.createElement(BMCCell, { title: "Fontes de Receita", fieldKey: "receitas", data: data, onChange: handleChange, height: "h-32" }))
+                )
+            );
+        };
 
-      {isModalOpen && selectedLead && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex justify-end backdrop-blur-sm animate-fadeIn">
-            <div className="bg-white w-full max-w-6xl h-full shadow-2xl flex flex-col animate-slideInRight">
-                <div className="flex justify-between items-center p-4 border-b bg-gray-50">
-                    <div>
-                        <h2 className="text-2xl font-bold text-gray-800 flex items-center gap-2">{selectedLead.title}<span className="text-sm font-normal text-gray-500 bg-gray-200 px-2 py-0.5 rounded">#{String(selectedLead.id).slice(-4)}</span></h2>
-                        <div className="flex items-center gap-4 mt-2">
-                            <select value={selectedLead.status} onChange={(e) => changeStatus(selectedLead.id, e.target.value)} className="text-sm border rounded px-2 py-1 bg-white outline-none">
-                                {COLUMNS.map(col => <option key={col.id} value={col.id}>{col.title}</option>)}
-                            </select>
-                        </div>
-                    </div>
-                    <button onClick={() => setIsModalOpen(false)} className="text-gray-400 hover:text-black p-2"><X size={24} /></button>
-                </div>
-                <div className="flex flex-1 overflow-hidden">
-                    <div className="w-64 bg-gray-50 border-r overflow-y-auto">
-                        <nav className="p-2 space-y-1">
-                            {TABS.map(tab => {
-                                const Icon = tab.icon;
-                                return (
-                                    <button key={tab.id} onClick={() => setActiveTab(tab.id)} className={`w-full flex items-center gap-3 px-3 py-3 text-sm font-medium rounded-md transition-colors ${activeTab === tab.id ? 'bg-white text-red-600 shadow-sm border border-gray-200' : 'text-gray-600 hover:bg-gray-100'}`}>
-                                        <Icon size={18} /><span className="text-left">{tab.label}</span>
-                                    </button>
-                                );
-                            })}
-                        </nav>
-                    </div>
-                    <div className="flex-1 overflow-y-auto p-8 bg-white"><div className="max-w-4xl mx-auto">{renderTabContent()}</div></div>
-                </div>
-            </div>
-        </div>
-      )}
-      <style>{`.custom-scrollbar::-webkit-scrollbar { width: 6px; } .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; } @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } } .animate-fadeIn { animation: fadeIn 0.2s ease-out; } @keyframes slideInRight { from { transform: translateX(100%); } to { transform: translateX(0); } } .animate-slideInRight { animation: slideInRight 0.3s cubic-bezier(0.16, 1, 0.3, 1); }`}</style>
-    </div>
-  );
-}
+        const SexyCanvas = ({ data, onChange }) => {
+            const handleChange = (key, val) => onChange('sexy', { ...data, [key]: val });
+            const normalize = (str) => str.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+            return React.createElement('div', { className: "grid md:grid-cols-2 gap-6" },
+                React.createElement('div', { className: "bg-pink-50 p-4 rounded border border-pink-200" },
+                    React.createElement('h4', { className: "font-bold text-pink-700 mb-4 text-center text-lg" }, "Os 7 Pecados (Emoção/Desejo)"),
+                    ['Luxúria', 'Gula', 'Avareza', 'Preguiça', 'Ira', 'Inveja', 'Orgulho'].map(p => 
+                        React.createElement(InputGroup, { key: p, label: p, value: data[normalize(p)], onChange: (v) => handleChange(normalize(p), v), type: "text" })
+                    )
+                ),
+                React.createElement('div', { className: "bg-blue-50 p-4 rounded border border-blue-200" },
+                    React.createElement('h4', { className: "font-bold text-blue-700 mb-4 text-center text-lg" }, "Criança Interior (Curiosidade/Diversão)"),
+                    ['Curiosidade', 'Diversão', 'Pertencimento', 'Segurança', 'Liberdade'].map(p => 
+                        React.createElement(InputGroup, { key: p, label: p, value: data[normalize(p)], onChange: (v) => handleChange(normalize(p), v), type: "text" })
+                    )
+                )
+            );
+        };
+
+        // --- APLICAÇÃO PRINCIPAL ---
+        function CRMBoard() {
+            const [leads, setLeads] = useState([INITIAL_LEAD]);
+            const [selectedLead, setSelectedLead] = useState(null);
+            const [activeTab, setActiveTab] = useState('pre-info');
+            const [isModalOpen, setIsModalOpen] = useState(false);
+            const [dragOverCol, setDragOverCol] = useState(null);
+
+            // INTEGRAÇÃO
+            useEffect(() => {
+                const loadLeadsFromStorage = () => {
+                    try {
+                        const storedLeads = localStorage.getItem('v4_crm_leads');
+                        if (storedLeads) {
+                            const parsedLeads = JSON.parse(storedLeads);
+                            if (Array.isArray(parsedLeads)) {
+                                const validLeads = parsedLeads.filter(l => l && l.id && l.data);
+                                setLeads(prev => {
+                                    const currentIds = new Set(prev.map(l => l.id));
+                                    const newLeads = validLeads.filter(l => !currentIds.has(l.id));
+                                    return [...prev, ...newLeads];
+                                });
+                            }
+                        }
+                    } catch (e) { console.error("Erro ao carregar dados", e); }
+                };
+                loadLeadsFromStorage();
+                window.addEventListener('storage', loadLeadsFromStorage);
+                return () => window.removeEventListener('storage', loadLeadsFromStorage);
+            }, []);
+
+            const clearStorageData = () => {
+                if(confirm('Limpar dados importados?')) {
+                    localStorage.removeItem('v4_crm_leads');
+                    window.location.reload();
+                }
+            }
+
+            const updateLeadData = (section, key, value) => {
+                if (!selectedLead) return;
+                const updatedLead = { ...selectedLead };
+                if (!updatedLead.data) updatedLead.data = {};
+                if (section === 'root') { updatedLead.data[key] = value; } 
+                else {
+                    if (!updatedLead.data[section]) updatedLead.data[section] = {};
+                    if (typeof key === 'object') { updatedLead.data[section] = key; }
+                    else { updatedLead.data[section][key] = value; }
+                }
+                setSelectedLead(updatedLead);
+                setLeads(leads.map(l => l.id === updatedLead.id ? updatedLead : l));
+            };
+
+            const handleCreateLead = () => {
+                const newLead = { id: Date.now(), title: "Lead Manual", contact: "Aguardando...", status: "pre-kickoff", data: { kickoff: {}, bmc: {}, sexy: {}, market: {}, swot: {}, audit: {} } };
+                setLeads([...leads, newLead]);
+            };
+
+            const handleDeleteLead = (id) => {
+                if(confirm('Tem certeza que deseja excluir este lead?')) {
+                    setLeads(prev => prev.filter(l => l.id !== id));
+                    if(selectedLead?.id === id) setIsModalOpen(false);
+                    
+                    // Atualizar também o LocalStorage
+                    const currentStorage = JSON.parse(localStorage.getItem('v4_crm_leads') || '[]');
+                    const newStorage = currentStorage.filter(l => l.id !== id);
+                    localStorage.setItem('v4_crm_leads', JSON.stringify(newStorage));
+                }
+            };
+
+            const changeStatus = (leadId, newStatus) => {
+                const targetLead = leads.find(l => l.id === leadId);
+                if (!targetLead) return;
+                const updated = { ...targetLead, status: newStatus };
+                setLeads(prev => prev.map(l => l.id === leadId ? updated : l));
+                if (selectedLead && selectedLead.id === leadId) setSelectedLead(updated);
+            };
+
+            const renderTabContent = () => {
+                const data = selectedLead?.data || {};
+                switch (activeTab) {
+                    case 'pre-info':
+                        return React.createElement('div', { className: "space-y-4 animate-fadeIn pb-10" },
+                            React.createElement('h2', { className: "text-2xl font-bold text-gray-800" }, "1. Dados do Pré Kick-off"),
+                            React.createElement(SectionTitle, null, "Dados Gerais & Cultura"),
+                            React.createElement(InputGroup, { label: "Nome da Empresa", value: data.pre_nome, onChange: (v) => updateLeadData('root', 'pre_nome', v), type: "text" }),
+                            React.createElement(InputGroup, { label: "Principais Envolvidos", value: data.pre_envolvidos, onChange: (v) => updateLeadData('root', 'pre_envolvidos', v) }),
+                            React.createElement(InputGroup, { label: "Site/Redes", value: data.pre_site_social, onChange: (v) => updateLeadData('root', 'pre_site_social', v), type: "text" }),
+                            React.createElement(InputGroup, { label: "Histórico", value: data.pre_historico, onChange: (v) => updateLeadData('root', 'pre_historico', v) }),
+                            React.createElement('div', { className: "grid md:grid-cols-3 gap-4" },
+                                React.createElement(InputGroup, { label: "Missão", value: data.pre_missao, onChange: (v) => updateLeadData('root', 'pre_missao', v) }),
+                                React.createElement(InputGroup, { label: "Visão", value: data.pre_visao, onChange: (v) => updateLeadData('root', 'pre_visao', v) }),
+                                React.createElement(InputGroup, { label: "Valores", value: data.pre_valores, onChange: (v) => updateLeadData('root', 'pre_valores', v) })
+                            ),
+                            React.createElement(SectionTitle, null, "Negócio & Financeiro"),
+                            React.createElement(InputGroup, { label: "Modelo de Negócio", value: data.pre_modelo_negocio, onChange: (v) => updateLeadData('root', 'pre_modelo_negocio', v) }),
+                            React.createElement(InputGroup, { label: "Faturamento (Mês a Mês)", value: data.pre_faturamento_detalhado, onChange: (v) => updateLeadData('root', 'pre_faturamento_detalhado', v) }),
+                            React.createElement(InputGroup, { label: "Mix de Produtos", value: data.pre_mix_produtos, onChange: (v) => updateLeadData('root', 'pre_mix_produtos', v) }),
+                            React.createElement('div', { className: "grid md:grid-cols-2 gap-4" },
+                                React.createElement(InputGroup, { label: "% Clientes Novos vs Base", value: data.pre_novos_vs_base, onChange: (v) => updateLeadData('root', 'pre_novos_vs_base', v), type: "text" }),
+                                React.createElement(InputGroup, { label: "Ticket Médio", value: data.pre_ticket_medio, onChange: (v) => updateLeadData('root', 'pre_ticket_medio', v), type: "text" }),
+                                React.createElement(InputGroup, { label: "% Custo Variável", value: data.pre_custo_variavel, onChange: (v) => updateLeadData('root', 'pre_custo_variavel', v), type: "text" }),
+                                React.createElement(InputGroup, { label: "Recorrência", value: data.pre_recorrencia, onChange: (v) => updateLeadData('root', 'pre_recorrencia', v), type: "text" })
+                            ),
+                            React.createElement(SectionTitle, null, "Cliente & Mercado"),
+                            React.createElement(InputGroup, { label: "Público Alvo (Persona)", value: data.pre_publico_alvo, onChange: (v) => updateLeadData('root', 'pre_publico_alvo', v) }),
+                            React.createElement(InputGroup, { label: "Grande Promessa", value: data.pre_promessa, onChange: (v) => updateLeadData('root', 'pre_promessa', v) }),
+                            React.createElement(InputGroup, { label: "Dores e Medos", value: data.pre_necessidades_medos, onChange: (v) => updateLeadData('root', 'pre_necessidades_medos', v) }),
+                            React.createElement(InputGroup, { label: "Concorrentes", value: data.pre_concorrentes, onChange: (v) => updateLeadData('root', 'pre_concorrentes', v) }),
+                            React.createElement(InputGroup, { label: "Objeções", value: data.pre_objecoes, onChange: (v) => updateLeadData('root', 'pre_objecoes', v) }),
+                            React.createElement(SectionTitle, null, "Marketing & Comercial"),
+                            React.createElement(InputGroup, { label: "Canais Atuais", value: data.pre_canais_atuais, onChange: (v) => updateLeadData('root', 'pre_canais_atuais', v) }),
+                            React.createElement(InputGroup, { label: "% Por Canal", value: data.pre_canais_percentual, onChange: (v) => updateLeadData('root', 'pre_canais_percentual', v) }),
+                            React.createElement('div', { className: "grid md:grid-cols-2 gap-4" },
+                                React.createElement(InputGroup, { label: "Verba Mídia", value: data.pre_verba_midia, onChange: (v) => updateLeadData('root', 'pre_verba_midia', v), type: "text" }),
+                                React.createElement(InputGroup, { label: "Possui MIV?", value: data.pre_miv, onChange: (v) => updateLeadData('root', 'pre_miv', v), type: "text" })
+                            ),
+                            React.createElement(InputGroup, { label: "Equipe Marketing", value: data.pre_equipe_mkt, onChange: (v) => updateLeadData('root', 'pre_equipe_mkt', v) }),
+                            React.createElement('div', { className: "mt-4 pt-4 border-t border-gray-200" },
+                                React.createElement(InputGroup, { label: "Equipe Comercial", value: data.pre_equipe_comercial, onChange: (v) => updateLeadData('root', 'pre_equipe_comercial', v) }),
+                                React.createElement(InputGroup, { label: "% Por Vendedor", value: data.pre_vendedores_percentual, onChange: (v) => updateLeadData('root', 'pre_vendedores_percentual', v) }),
+                                React.createElement(InputGroup, { label: "Processos Comerciais", value: data.pre_processos_comercial, onChange: (v) => updateLeadData('root', 'pre_processos_comercial', v) })
+                            ),
+                            React.createElement('div', { className: "mt-6 bg-red-50 border-l-4 border-red-600 p-4" },
+                                React.createElement('h4', { className: "font-bold text-red-800" }, "Objetivo Principal"),
+                                React.createElement(InputGroup, { label: "", value: data.pre_objetivo, onChange: (v) => updateLeadData('root', 'pre_objetivo', v) })
+                            ),
+                            React.createElement('div', { className: "mt-4 flex items-center gap-2 text-gray-600 bg-gray-100 p-3 rounded" },
+                                React.createElement(Calendar, { size: 18 }),
+                                React.createElement('span', { className: "font-semibold text-sm" }, "Sugestão Kick-off:"),
+                                React.createElement('span', { className: "text-sm" }, data.pre_sugestao_kickoff || 'Não informada')
+                            )
+                        );
+                    case 'kickoff-q': return React.createElement('div', { className: "space-y-6 animate-fadeIn pb-10" }, React.createElement('h2', { className: "text-xl font-bold" }, "2. Perguntas Kick-off"), React.createElement(SectionTitle, null, "Posicionamento"), React.createElement(InputGroup, { label: "Pitch Elevador", value: data.kickoff?.q1, onChange: (v) => updateLeadData('kickoff', 'q1', v) }), React.createElement(InputGroup, { label: "Dor Latente", value: data.kickoff?.q3, onChange: (v) => updateLeadData('kickoff', 'q3', v) }), React.createElement(SectionTitle, null, "Oferta"), React.createElement(InputGroup, { label: "Super Garantia", value: data.kickoff?.q11, onChange: (v) => updateLeadData('kickoff', 'q11', v) }));
+                    case 'onboarding': return React.createElement('div', { className: "space-y-6 animate-fadeIn pb-10" }, React.createElement('h2', { className: "text-xl font-bold" }, "3. Onboarding Técnico"), React.createElement(InputGroup, { label: "Anotações Gerais", value: data.kickoff?.acessos_obs, onChange: (v) => updateLeadData('kickoff', 'acessos_obs', v) }));
+                    case 'market': return React.createElement('div', { className: "space-y-6 animate-fadeIn pb-10" }, React.createElement('h2', { className: "text-xl font-bold" }, "4. Mercado & SWOT"), React.createElement(InputGroup, { label: "TAM/SAM/SOM", value: data.market?.tam, onChange: (v) => updateLeadData('market', 'tam', v) }));
+                    case 'audit': return React.createElement('div', { className: "space-y-6 animate-fadeIn pb-10" }, React.createElement('h2', { className: "text-xl font-bold" }, "5. Auditoria"), React.createElement(InputGroup, { label: "Estrutura Atual", value: data.audit?.saber, onChange: (v) => updateLeadData('audit', 'saber', v) }));
+                    case 'bmc': return React.createElement('div', { className: "space-y-4 animate-fadeIn pb-10" }, React.createElement('h2', { className: "text-xl font-bold" }, "6. BMC"), React.createElement(BusinessModelCanvas, { data: data.bmc || {}, onChange: (key, val) => updateLeadData(key, val) }));
+                    case 'sexy': return React.createElement('div', { className: "space-y-4 animate-fadeIn pb-10" }, React.createElement('h2', { className: "text-xl font-bold" }, "7. Sexy Canvas"), React.createElement(SexyCanvas, { data: data.sexy || {}, onChange: (key, val) => updateLeadData(key, val) }));
+                    default: return React.createElement('div', null, "Selecione uma aba.");
+                }
+            };
+
+            return React.createElement('div', { className: "flex flex-col h-screen bg-gray-100 font-sans text-gray-900 overflow-hidden" },
+                React.createElement('header', { className: "bg-black text-white px-6 py-4 flex justify-between items-center shadow-md z-10" },
+                    React.createElement('div', { className: "flex items-center gap-2" },
+                        React.createElement('div', { className: "w-8 h-8 bg-red-600 rounded flex items-center justify-center font-bold" }, "V4"),
+                        React.createElement('h1', { className: "text-xl font-bold tracking-wide" }, "CRM & Kick-off Board")
+                    ),
+                    React.createElement('div', { className: "flex gap-2" },
+                        React.createElement('button', { onClick: () => window.location.reload(), className: "flex items-center gap-2 bg-gray-800 hover:bg-gray-700 px-3 py-2 rounded text-xs font-semibold transition" }, React.createElement(RefreshCw, { size: 14 }), " Atualizar"),
+                        React.createElement('button', { onClick: clearStorageData, className: "flex items-center gap-2 bg-gray-800 hover:bg-gray-700 px-3 py-2 rounded text-xs font-semibold transition" }, React.createElement(Trash2, { size: 14 })),
+                        React.createElement('button', { onClick: handleCreateLead, className: "flex items-center gap-2 bg-red-600 hover:bg-red-700 px-4 py-2 rounded text-sm font-semibold transition" }, React.createElement(Plus, { size: 16 }), " Novo Lead")
+                    )
+                ),
+                React.createElement('div', { className: "flex-1 overflow-x-auto p-6" },
+                    React.createElement('div', { className: "flex gap-4 h-full min-w-[1000px]" },
+                        COLUMNS.map(col => React.createElement('div', {
+                            key: col.id,
+                            onDragOver: (e) => { e.preventDefault(); setDragOverCol(col.id); },
+                            onDrop: (e) => {
+                                e.preventDefault();
+                                const leadId = Number(e.dataTransfer.getData("leadId"));
+                                setDragOverCol(null);
+                                changeStatus(leadId, col.id);
+                            },
+                            className: `flex-1 bg-gray-50 rounded-lg flex flex-col min-w-[280px] shadow-sm max-h-full transition-colors ${dragOverCol === col.id ? 'bg-red-50 ring-2 ring-red-300' : ''}`
+                        },
+                            React.createElement('div', { className: `p-3 font-bold text-gray-700 border-b flex justify-between items-center ${col.color}` },
+                                React.createElement('span', null, col.title),
+                                React.createElement('span', { className: "bg-gray-200 text-gray-600 text-xs px-2 py-0.5 rounded-full" }, leads.filter(l => l.status === col.id).length)
+                            ),
+                            React.createElement('div', { className: "p-3 overflow-y-auto flex-1 custom-scrollbar" },
+                                leads.filter(l => l.status === col.id).map(lead => 
+                                    React.createElement(Card, { key: lead.id, lead: lead, onClick: () => { setSelectedLead(lead); setIsModalOpen(true); }, onMove: changeStatus, onDelete: handleDeleteLead })
+                                )
+                            )
+                        ))
+                    )
+                ),
+                isModalOpen && selectedLead && React.createElement('div', { className: "fixed inset-0 bg-black/50 z-50 flex justify-end backdrop-blur-sm animate-fadeIn" },
+                    React.createElement('div', { className: "bg-white w-full max-w-6xl h-full shadow-2xl flex flex-col animate-slideInRight" },
+                        React.createElement('div', { className: "flex justify-between items-center p-4 border-b bg-gray-50" },
+                            React.createElement('div', null,
+                                React.createElement('h2', { className: "text-2xl font-bold text-gray-800 flex items-center gap-2" },
+                                    selectedLead.title,
+                                    React.createElement('span', { className: "text-sm font-normal text-gray-500 bg-gray-200 px-2 py-0.5 rounded" }, `#${String(selectedLead.id).slice(-4)}`)
+                                ),
+                                React.createElement('div', { className: "flex items-center gap-4 mt-2" },
+                                    React.createElement('select', {
+                                        value: selectedLead.status,
+                                        onChange: (e) => changeStatus(selectedLead.id, e.target.value),
+                                        className: "text-sm border rounded px-2 py-1 bg-white outline-none"
+                                    }, COLUMNS.map(col => React.createElement('option', { key: col.id, value: col.id }, col.title)))
+                                )
+                            ),
+                            React.createElement('button', { onClick: () => setIsModalOpen(false), className: "text-gray-400 hover:text-black p-2" }, React.createElement(X, { size: 24 }))
+                        ),
+                        React.createElement('div', { className: "flex flex-1 overflow-hidden" },
+                            React.createElement('div', { className: "w-64 bg-gray-50 border-r overflow-y-auto" },
+                                React.createElement('nav', { className: "p-2 space-y-1" },
+                                    TABS.map(tab => {
+                                        const Icon = tab.icon;
+                                        return React.createElement('button', {
+                                            key: tab.id,
+                                            onClick: () => setActiveTab(tab.id),
+                                            className: `w-full flex items-center gap-3 px-3 py-3 text-sm font-medium rounded-md transition-colors ${activeTab === tab.id ? 'bg-white text-red-600 shadow-sm border border-gray-200' : 'text-gray-600 hover:bg-gray-100'}`
+                                        }, React.createElement(Icon, { size: 18 }), React.createElement('span', { className: "text-left" }, tab.label));
+                                    })
+                                )
+                            ),
+                            React.createElement('div', { className: "flex-1 overflow-y-auto p-8 bg-white" },
+                                React.createElement('div', { className: "max-w-4xl mx-auto" }, renderTabContent())
+                            )
+                        )
+                    )
+                )
+            );
+        }
+
+        const root = createRoot(document.getElementById('root'));
+        root.render(React.createElement(CRMBoard));
+    </script>
+</body>
+</html>
