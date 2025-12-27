@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, X, ChevronRight, ChevronLeft, Save, FileText, CheckSquare, BarChart, Grid, Heart, Layout, LayoutDashboard, Search, Settings, RefreshCw, Trash2 } from 'lucide-react';
+import { Plus, X, ChevronRight, ChevronLeft, Save, FileText, CheckSquare, BarChart, Grid, Heart, Layout, LayoutDashboard, Search, Settings, RefreshCw, Trash2, Calendar } from 'lucide-react';
 
 // --- DATA STRUCTURES & CONFIG ---
 
@@ -26,9 +26,67 @@ const INITIAL_LEAD = {
   contact: "João Silva",
   status: "pre-kickoff",
   data: {
+    // 1. DADOS DA EMPRESA E CULTURA
     pre_nome: "Lead Exemplo (Demo)",
-    pre_envolvidos: "João Silva (CEO)",
-    pre_objetivo: "Exemplo de dados preenchidos",
+    pre_envolvidos: "João Silva (CEO), Maria (CMO)",
+    pre_historico: "Empresa fundada em 2015...",
+    pre_missao: "Transformar o mercado de...",
+    pre_visao: "Ser referência até 2030...",
+    pre_valores: "Inovação, Transparência...",
+    pre_site_social: "instagram.com/exemplo",
+    
+    // 2. MODELO DE NEGÓCIO E FINANCEIRO
+    pre_modelo_negocio: "B2B, Recorrência",
+    pre_faturamento_detalhado: "Jan: 100k, Fev: 110k...",
+    pre_sazonalidade: "Queda nas férias escolares",
+    pre_mix_produtos: "Consultoria (60%), Software (40%)",
+    pre_novos_vs_base: "70% Base, 30% Novos",
+    pre_regiao: "Nacional",
+    pre_tempo_negociacao: "30 a 45 dias",
+    pre_transacoes_mes: "15 contratos",
+    pre_ticket_medio: "R$ 5.000,00",
+    pre_custo_variavel: "20%",
+    pre_recorrencia: "Mensal (12x ano)",
+    pre_estrategia_preco: "Maximização de margem de lucro",
+
+    // 3. PRODUTOS, CLIENTES E MERCADO
+    pre_publico_alvo: "Diretores de TI, Empresas > 50 func",
+    pre_decisor: "CFO e CTO",
+    pre_influenciador: "Gerentes de Projeto",
+    pre_nivel_consciencia: "Consciente do Problema",
+    pre_reconhecimento_necessidade: "Quando a auditoria falha",
+    pre_promessa: "Conformidade fiscal sem dor de cabeça",
+    pre_necessidades_medos: "Medo de multas",
+    pre_motivos_escolha: "Atendimento 24h e suporte local",
+    pre_concorrentes: "Big4, Consultorias Locais",
+    pre_objecoes: "Custo de implementação alto",
+    pre_pesquisa_satisfacao: "Sim",
+    pre_nivel_satisfacao: "Muito Satisfeitos",
+    pre_nivel_satisfacao_obs: "", // Campo extra para "Outro"
+
+    // 4. SWOT (Do Formulário)
+    pre_swot_s: "Equipe técnica certificada",
+    pre_swot_w: "Marketing fraco",
+    pre_swot_o: "Nova lei de proteção de dados",
+    pre_swot_t: "Novos softwares de IA",
+
+    // 5. MARKETING E COMERCIAL
+    pre_canais_atuais: "Indicação, Eventos",
+    pre_canais_percentual: "Indicação (80%), Eventos (20%)", // Campo Adicionado
+    pre_verba_midia: "R$ 2.000,00",
+    pre_equipe_mkt: "1 Estagiário",
+    pre_processos_mkt: "Postagens esporádicas no LinkedIn",
+    pre_miv: "Não",
+    pre_requisitos_marca: "Não usar verde limão", // Campo Adicionado
+    pre_equipe_comercial: "João (Sócio faz vendas)",
+    pre_vendedores_percentual: "João (100%)", // Campo Adicionado
+    pre_processos_comercial: "Planilha Excel",
+    
+    // 6. FINALIZAÇÃO
+    pre_objetivo: "Estruturar máquina de vendas previsível",
+    pre_sugestao_kickoff: "Terça-feira às 14h", // Campo Adicionado
+    
+    // Outras seções do CRM
     kickoff: {}, bmc: {}, sexy: {}, market: {}, swot: {}, audit: {}
   }
 };
@@ -283,34 +341,57 @@ export default function CRMBoard() {
                 <span className="text-xs bg-yellow-200 px-2 py-1 rounded">Read-Only / Editável</span>
             </div>
             
-            <SectionTitle>Dados Gerais</SectionTitle>
+            <SectionTitle>Dados Gerais & Cultura</SectionTitle>
             <InputGroup label="Nome da Empresa" value={data.pre_nome} onChange={(v) => updateLeadData('root', 'pre_nome', v)} type="text" />
-            <InputGroup label="Envolvidos" value={data.pre_envolvidos} onChange={(v) => updateLeadData('root', 'pre_envolvidos', v)} />
-            <InputGroup label="Site/Redes" value={data.pre_site_social} onChange={(v) => updateLeadData('root', 'pre_site_social', v)} type="text" />
-            <InputGroup label="Histórico" value={data.pre_historico} onChange={(v) => updateLeadData('root', 'pre_historico', v)} />
+            <InputGroup label="Principais Envolvidos (Nome/Cargo)" value={data.pre_envolvidos} onChange={(v) => updateLeadData('root', 'pre_envolvidos', v)} />
+            <InputGroup label="Site e Redes Sociais" value={data.pre_site_social} onChange={(v) => updateLeadData('root', 'pre_site_social', v)} type="text" />
+            <InputGroup label="Histórico da Empresa" value={data.pre_historico} onChange={(v) => updateLeadData('root', 'pre_historico', v)} />
             <div className="grid md:grid-cols-3 gap-4">
                 <InputGroup label="Missão" value={data.pre_missao} onChange={(v) => updateLeadData('root', 'pre_missao', v)} />
                 <InputGroup label="Visão" value={data.pre_visao} onChange={(v) => updateLeadData('root', 'pre_visao', v)} />
                 <InputGroup label="Valores" value={data.pre_valores} onChange={(v) => updateLeadData('root', 'pre_valores', v)} />
             </div>
 
-            <SectionTitle>Negócio & Produto</SectionTitle>
-            <InputGroup label="Modelo de Negócio" value={data.pre_modelo_negocio} onChange={(v) => updateLeadData('root', 'pre_modelo_negocio', v)} type="text" />
-            <InputGroup label="Produtos" value={data.pre_mix_produtos} onChange={(v) => updateLeadData('root', 'pre_mix_produtos', v)} />
-            <InputGroup label="Faturamento Detalhado" value={data.pre_faturamento_detalhado} onChange={(v) => updateLeadData('root', 'pre_faturamento_detalhado', v)} />
+            <SectionTitle>Negócio, Financeiro & Produtos</SectionTitle>
+            <InputGroup label="Modelo de Negócio (B2B/B2C/etc)" value={data.pre_modelo_negocio} onChange={(v) => updateLeadData('root', 'pre_modelo_negocio', v)} type="text" />
+            <InputGroup label="Faturamento Detalhado (Mês a Mês)" value={data.pre_faturamento_detalhado} onChange={(v) => updateLeadData('root', 'pre_faturamento_detalhado', v)} />
+            <InputGroup label="Peculiaridades Sazonais" value={data.pre_sazonalidade} onChange={(v) => updateLeadData('root', 'pre_sazonalidade', v)} />
+            <InputGroup label="Mix de Produtos/Serviços (% Faturamento)" value={data.pre_mix_produtos} onChange={(v) => updateLeadData('root', 'pre_mix_produtos', v)} />
             <div className="grid md:grid-cols-2 gap-4">
+                <InputGroup label="% Clientes Novos vs Base" value={data.pre_novos_vs_base} onChange={(v) => updateLeadData('root', 'pre_novos_vs_base', v)} type="text" />
+                <InputGroup label="Região de Atuação (%)" value={data.pre_regiao} onChange={(v) => updateLeadData('root', 'pre_regiao', v)} type="text" />
+                <InputGroup label="Tempo Médio Negociação" value={data.pre_tempo_negociacao} onChange={(v) => updateLeadData('root', 'pre_tempo_negociacao', v)} type="text" />
+                <InputGroup label="Transações Mensais" value={data.pre_transacoes_mes} onChange={(v) => updateLeadData('root', 'pre_transacoes_mes', v)} type="text" />
                 <InputGroup label="Ticket Médio" value={data.pre_ticket_medio} onChange={(v) => updateLeadData('root', 'pre_ticket_medio', v)} type="text" />
-                <InputGroup label="Custo Variável" value={data.pre_custo_variavel} onChange={(v) => updateLeadData('root', 'pre_custo_variavel', v)} type="text" />
+                <InputGroup label="% Custo Variável" value={data.pre_custo_variavel} onChange={(v) => updateLeadData('root', 'pre_custo_variavel', v)} type="text" />
+                <InputGroup label="Recorrência de Compra" value={data.pre_recorrencia} onChange={(v) => updateLeadData('root', 'pre_recorrencia', v)} type="text" />
+                <InputGroup label="Estratégia de Preço" value={data.pre_estrategia_preco} onChange={(v) => updateLeadData('root', 'pre_estrategia_preco', v)} type="text" />
             </div>
 
-            <SectionTitle>Cliente & Mercado</SectionTitle>
-            <InputGroup label="Público Alvo" value={data.pre_publico_alvo} onChange={(v) => updateLeadData('root', 'pre_publico_alvo', v)} />
-            <InputGroup label="Promessa/Benefício" value={data.pre_promessa} onChange={(v) => updateLeadData('root', 'pre_promessa', v)} />
-            <InputGroup label="Dores/Medos" value={data.pre_necessidades_medos} onChange={(v) => updateLeadData('root', 'pre_necessidades_medos', v)} />
-            <InputGroup label="Objeções" value={data.pre_objecoes} onChange={(v) => updateLeadData('root', 'pre_objecoes', v)} />
-            <InputGroup label="Concorrentes" value={data.pre_concorrentes} onChange={(v) => updateLeadData('root', 'pre_concorrentes', v)} />
+            <SectionTitle>Cliente, Mercado & Concorrência</SectionTitle>
+            <InputGroup label="Público Alvo (Persona)" value={data.pre_publico_alvo} onChange={(v) => updateLeadData('root', 'pre_publico_alvo', v)} />
+            <div className="grid md:grid-cols-2 gap-4">
+                <InputGroup label="Quem Decide?" value={data.pre_decisor} onChange={(v) => updateLeadData('root', 'pre_decisor', v)} type="text" />
+                <InputGroup label="Quem Influencia?" value={data.pre_influenciador} onChange={(v) => updateLeadData('root', 'pre_influenciador', v)} type="text" />
+                <InputGroup label="Nível Consciência" value={data.pre_nivel_consciencia} onChange={(v) => updateLeadData('root', 'pre_nivel_consciencia', v)} type="text" />
+                <InputGroup label="Quando reconhecem a necessidade?" value={data.pre_reconhecimento_necessidade} onChange={(v) => updateLeadData('root', 'pre_reconhecimento_necessidade', v)} type="text" />
+            </div>
+            <InputGroup label="Grande Promessa (Benefício Final)" value={data.pre_promessa} onChange={(v) => updateLeadData('root', 'pre_promessa', v)} />
+            <InputGroup label="Maiores Necessidades/Medos" value={data.pre_necessidades_medos} onChange={(v) => updateLeadData('root', 'pre_necessidades_medos', v)} />
+            <InputGroup label="Motivos da Escolha (vs Concorrente)" value={data.pre_motivos_escolha} onChange={(v) => updateLeadData('root', 'pre_motivos_escolha', v)} />
+            <InputGroup label="Concorrentes Diretos" value={data.pre_concorrentes} onChange={(v) => updateLeadData('root', 'pre_concorrentes', v)} />
+            <InputGroup label="Principais Objeções" value={data.pre_objecoes} onChange={(v) => updateLeadData('root', 'pre_objecoes', v)} />
             
-            <SectionTitle>SWOT (Cliente)</SectionTitle>
+            <div className="grid md:grid-cols-2 gap-4">
+                <InputGroup label="Fazem Pesquisa de Satisfação?" value={data.pre_pesquisa_satisfacao} onChange={(v) => updateLeadData('root', 'pre_pesquisa_satisfacao', v)} type="text" />
+                <div>
+                     <label className="block text-sm font-bold text-gray-700 mb-1">Nível de Satisfação</label>
+                     <input type="text" className="w-full p-2 border border-gray-300 rounded mb-2" value={data.pre_nivel_satisfacao || ''} onChange={(e) => updateLeadData('root', 'pre_nivel_satisfacao', e.target.value)} />
+                     <input type="text" className="w-full p-2 border border-gray-300 rounded bg-gray-50 text-xs" placeholder="Obs / Outro nível..." value={data.pre_nivel_satisfacao_obs || ''} onChange={(e) => updateLeadData('root', 'pre_nivel_satisfacao_obs', e.target.value)} />
+                </div>
+            </div>
+            
+            <SectionTitle>Análise SWOT (Cliente)</SectionTitle>
             <div className="grid grid-cols-2 gap-4">
                 <div className="bg-green-50 p-2 rounded"><span className="font-bold text-green-800">Forças</span><p className="text-sm mt-1">{data.pre_swot_s}</p></div>
                 <div className="bg-red-50 p-2 rounded"><span className="font-bold text-red-800">Fraquezas</span><p className="text-sm mt-1">{data.pre_swot_w}</p></div>
@@ -318,11 +399,34 @@ export default function CRMBoard() {
                 <div className="bg-yellow-50 p-2 rounded"><span className="font-bold text-yellow-800">Ameaças</span><p className="text-sm mt-1">{data.pre_swot_t}</p></div>
             </div>
 
-            <SectionTitle>Marketing Atual</SectionTitle>
-            <InputGroup label="Canais Atuais" value={data.pre_canais_atuais} onChange={(v) => updateLeadData('root', 'pre_canais_atuais', v)} />
-            <InputGroup label="Verba Mídia" value={data.pre_verba_midia} onChange={(v) => updateLeadData('root', 'pre_verba_midia', v)} type="text" />
-            <InputGroup label="Ferramentas MKT" value={data.pre_processos_mkt} onChange={(v) => updateLeadData('root', 'pre_processos_mkt', v)} />
-            <InputGroup label="Objetivo Principal" value={data.pre_objetivo} onChange={(v) => updateLeadData('root', 'pre_objetivo', v)} />
+            <SectionTitle>Marketing & Comercial</SectionTitle>
+            <InputGroup label="Canais de Venda Atuais" value={data.pre_canais_atuais} onChange={(v) => updateLeadData('root', 'pre_canais_atuais', v)} />
+            <InputGroup label="% Representatividade de cada Canal" value={data.pre_canais_percentual} onChange={(v) => updateLeadData('root', 'pre_canais_percentual', v)} />
+            <div className="grid md:grid-cols-2 gap-4">
+                <InputGroup label="Verba Mídia Mensal" value={data.pre_verba_midia} onChange={(v) => updateLeadData('root', 'pre_verba_midia', v)} type="text" />
+                <InputGroup label="Possui MIV (Manual Marca)?" value={data.pre_miv} onChange={(v) => updateLeadData('root', 'pre_miv', v)} type="text" />
+            </div>
+            <InputGroup label="Requisitos Específicos de Marca" value={data.pre_requisitos_marca} onChange={(v) => updateLeadData('root', 'pre_requisitos_marca', v)} type="text" />
+            <InputGroup label="Equipe Marketing (Pessoas/Função)" value={data.pre_equipe_mkt} onChange={(v) => updateLeadData('root', 'pre_equipe_mkt', v)} />
+            <InputGroup label="Processos/Ferramentas Marketing" value={data.pre_processos_mkt} onChange={(v) => updateLeadData('root', 'pre_processos_mkt', v)} />
+            
+            <div className="mt-4 pt-4 border-t border-gray-200">
+                <InputGroup label="Equipe Comercial" value={data.pre_equipe_comercial} onChange={(v) => updateLeadData('root', 'pre_equipe_comercial', v)} />
+                <InputGroup label="% Faturamento por Vendedor" value={data.pre_vendedores_percentual} onChange={(v) => updateLeadData('root', 'pre_vendedores_percentual', v)} />
+                <InputGroup label="Performance Vendedores (Destaques)" value={data.pre_performance_vendedores} onChange={(v) => updateLeadData('root', 'pre_performance_vendedores', v)} />
+                <InputGroup label="Processos Comercial (CRM/Rituais)" value={data.pre_processos_comercial} onChange={(v) => updateLeadData('root', 'pre_processos_comercial', v)} />
+            </div>
+
+            <div className="mt-6 bg-red-50 border-l-4 border-red-600 p-4">
+                 <h4 className="font-bold text-red-800">Objetivo Principal com a V4</h4>
+                 <InputGroup label="" value={data.pre_objetivo} onChange={(v) => updateLeadData('root', 'pre_objetivo', v)} />
+            </div>
+
+            <div className="mt-4 flex items-center gap-2 text-gray-600 bg-gray-100 p-3 rounded">
+                <Calendar size={18} />
+                <span className="font-semibold text-sm">Sugestão de Data para Kick-off:</span>
+                <span className="text-sm">{data.pre_sugestao_kickoff || 'Não informada'}</span>
+            </div>
           </div>
         );
       case 'kickoff-q':
